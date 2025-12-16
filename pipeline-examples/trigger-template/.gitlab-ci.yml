@@ -1,0 +1,16 @@
+include:
+  - project: 'pipeline-examples/ci-templates'
+    file: 'terraform-template.yml'
+    ref: 'main'
+   
+    
+stages:
+  - terraform-apply
+  
+terraform-apply:
+  extends: .terraform_apply_base
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - "aws/gitlab/**/*"
+        - ".gitlab-ci.yml"

@@ -1,0 +1,63 @@
+# .gitlab-ci.yml — Simple pipeline to demonstrate CI/CD variables and masked output
+
+stages:
+  - verify
+
+variables:
+  # Core AWS credentials (dummy values). In GitLab UI, mark these as "Masked" and "Protected".
+  AWS_ACCESS_KEY_ID: "AKIA_DUMMY_ACCESS_KEY_ID"
+  AWS_SECRET_ACCESS_KEY: "DUMMY_SECRET_ACCESS_KEY_1234567890"
+  AWS_DEFAULT_REGION: "eu-west-2"
+  AWS_REGION: "eu-west-2"
+
+  # Terraform settings
+  TERRAFORM_VERSION: "1.14.2"
+  TERRAFORM_DIR: "aws/gitlab"
+  TERRAFORM_TFVARS_FILE: "account/playground2.tfvars.json"
+
+  # Role ARNs and external IDs (dummy)
+  ROLE1_ARN: "arn:aws:iam::111122223333:role/prepareit-developer"
+  ROLE1_EXTERNAL_ID: "developerRoleExternalID"
+  ROLE2_ARN: "arn:aws:iam::444455556666:role/BotUserTerraformStateRole"
+  ROLE2_EXTERNAL_ID: "stateRoleExternalID"
+
+  # Profiles
+  PLAYGROUND_PROFILE: "prepit-playground"
+  STATE_PROFILE: "prepit-terraform-state-access"
+
+print_variables:
+  stage: verify
+  image: ubuntu:latest
+  script:
+    - |
+      echo "=== CI/CD Variable Examples ==="
+
+      # Safe masked printing helpers
+      mask() { local v="$1"; local keep="${2:-4}"; local len="${#v}"; if [ "$len" -le "$keep" ]; then echo "$v"; else echo "${v:0:$keep}****(masked)"; fi }
+
+      echo "AWS_ACCESS_KEY_ID:           $(mask "$AWS_ACCESS_KEY_ID" 4)"
+      echo "AWS_SECRET_ACCESS_KEY:       ****(masked)"
+      echo "AWS_DEFAULT_REGION:          $AWS_DEFAULT_REGION"
+      echo "AWS_REGION:                  $AWS_REGION"
+
+      echo "TERRAFORM_VERSION:           $TERRAFORM_VERSION"
+      echo "TERRAFORM_DIR:               $TERRAFORM_DIR"
+      echo "TERRAFORM_TFVARS_FILE:       $TERRAFORM_TFVARS_FILE"
+
+      echo "ROLE1_ARN:                   $ROLE1_ARN"
+      echo "ROLE1_EXTERNAL_ID:           $(mask "$ROLE1_EXTERNAL_ID" 3)"
+      echo "ROLE2_ARN:                   $ROLE2_ARN"
+      echo "ROLE2_EXTERNAL_ID:           $(mask "$ROLE2_EXTERNAL_ID" 3)"
+
+      echo "PLAYGROUND_PROFILE:          $PLAYGROUND_PROFILE"
+      echo "STATE_PROFILE:               $STATE_PROFILE"
+
+      echo "CI_PIPELINE_ID:              ${CI_PIPELINE_ID:-(example in real CI)}"
+      echo "CI_COMMIT_SHA:               ${CI_COMMIT_SHA:-(example in real CI)}"
+
+      echo "\nTip: In GitLab -> Settings -> CI/CD -> Variables, mark secrets as Masked + Protected."
+
+      echo "\n=== Raw env sample (non-secret subset) ==="
+      echo "REGION + TF settings: $AWS_DEFAULT_REGION | $TERRAFORM_VERSION | $TERRAFORM_DIR | $TERRAFORM_TFVARS_FILE"
+
+      echo "\n=== End ==="

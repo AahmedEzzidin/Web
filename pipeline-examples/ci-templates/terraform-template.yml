@@ -1,0 +1,215 @@
+# Terraform CI/CD Template
+# This template can be included in other repositories
+# Usage: include this template and extend the jobs with repository-specific variables
+
+.terraform_base:
+  image: ubuntu:latest
+  variables:
+    AWS_DEFAULT_REGION: "eu-west-2"
+    AWS_REGION: "eu-west-2" 
+    TERRAFORM_VERSION: "1.14.2"
+    TERRAFORM_DIR: "aws/gitlab"
+    TERRAFORM_TFVARS_FILE: "account/playground2.tfvars.json"
+    ROLE1_ARN: "arn:aws:iam::324649640635:role/prepareit-developer"
+    ROLE1_EXTERNAL_ID: "developerRoleExternalID"
+    ROLE2_ARN: "arn:aws:iam::136675682713:role/BotUserTerraformStateRole"
+    ROLE2_EXTERNAL_ID: "developerRoleExternalID"
+    PLAYGROUND_PROFILE: "prepit-playground"
+    STATE_PROFILE: "prepit-terraform-state-access"
+  before_script:
+    - |
+      # Robust setup for Ubuntu runner (root or sudo)
+      export DEBIAN_FRONTEND=noninteractive
+
+      if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then
+          APT="sudo apt-get"
+          DEST="$HOME/.local/bin"
+          mkdir -p "$DEST"
+        else
+          echo "Non-root without sudo: cannot use apt-get. Exiting."
+          exit 1
+        fi
+      else
+        APT="apt-get"
+        DEST="/usr/local/bin"
+      fi
+
+      # Update and install dependencies
+      $APT update
+      $APT install -y curl unzip ca-certificates python3 python3-pip
+
+      # Install AWS CLI v2 using official installer (avoids apt/pip issues on Ubuntu 24.04+)
+      ARCH=$(uname -m)
+      case "$ARCH" in
+        x86_64|amd64)
+          AWSCLI_PKG="awscli-exe-linux-x86_64.zip";;
+        aarch64|arm64)
+          AWSCLI_PKG="awscli-exe-linux-aarch64.zip";;
+        *)
+          echo "Unsupported architecture: $ARCH"; exit 1;;
+      esac
+      curl -fsSL "https://awscli.amazonaws.com/${AWSCLI_PKG}" -o awscliv2.zip
+      unzip -q -o awscliv2.zip
+      if [ "$(id -u)" -eq 0 ]; then
+        if command -v aws >/dev/null 2>&1; then
+          ./aws/install --update -b "$DEST"
+        else
+          ./aws/install -b "$DEST"
+        fi
+      else
+        export PATH="$DEST:$PATH"
+        if [ -x "$HOME/.local/aws-cli/v2/current/bin/aws" ] || command -v aws >/dev/null 2>&1; then
+          ./aws/install --update -i "$HOME/.local/aws-cli" -b "$DEST"
+        else
+          ./aws/install -i "$HOME/.local/aws-cli" -b "$DEST"
+        fi
+      fi
+      aws --version
+      rm -rf aws awscliv2.zip
+
+      # Install Terraform
+      curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+      unzip -o terraform.zip
+      if [ "$(id -u)" -eq 0 ]; then
+        mv terraform "$DEST/terraform"
+      else
+        install -m 0755 terraform "$DEST/terraform"
+        export PATH="$DEST:$PATH"
+      fi
+      terraform version
+    - !reference [.configure_aws_base_credentials, script]
+    - !reference [.assume_role1, script]  
+    - !reference [.assume_role2, script]
+  after_script:
+    - !reference [.cleanup_credentials, script]
+
+.configure_aws_base_credentials:
+  script:
+    - |
+      aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+      aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+      aws configure set region $AWS_DEFAULT_REGION
+      echo "Configured base AWS credentials"
+
+.assume_role1:
+  script:
+    - |
+      echo "Assuming prepareit-developer role (ROLE 1)..."
+      ROLE1_CREDS=$(aws sts assume-role \
+        --role-arn $ROLE1_ARN \
+        --role-session-name "GitLabCI-$CI_PIPELINE_ID" \
+        --external-id $ROLE1_EXTERNAL_ID \
+        --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+        --output text)
+      
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to assume prepareit-developer role"
+        exit 1
+      fi
+      
+      export ROLE1_ACCESS_KEY=$(echo $ROLE1_CREDS | cut -d' ' -f1)
+      export ROLE1_SECRET_KEY=$(echo $ROLE1_CREDS | cut -d' ' -f2)
+      export ROLE1_SESSION_TOKEN=$(echo $ROLE1_CREDS | cut -d' ' -f3)
+      
+      aws configure set aws_access_key_id $ROLE1_ACCESS_KEY --profile $PLAYGROUND_PROFILE
+      aws configure set aws_secret_access_key $ROLE1_SECRET_KEY --profile $PLAYGROUND_PROFILE
+      aws configure set aws_session_token $ROLE1_SESSION_TOKEN --profile $PLAYGROUND_PROFILE
+      aws configure set region $AWS_DEFAULT_REGION --profile $PLAYGROUND_PROFILE
+      
+      echo "Successfully configured $PLAYGROUND_PROFILE profile"
+      aws sts get-caller-identity --profile $PLAYGROUND_PROFILE
+
+.assume_role2:
+  script:
+    - |
+      echo "Assuming terraform state role (ROLE 2)..."
+      ROLE2_CREDS=$(aws sts assume-role \
+        --role-arn "$ROLE2_ARN" \
+        --role-session-name "GitLabCI-$CI_PIPELINE_ID" \
+        --external-id "$ROLE2_EXTERNAL_ID" \
+        --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+        --output text)
+      
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to assume terraform state role"
+        exit 1
+      fi
+      
+      export ROLE2_ACCESS_KEY=$(echo $ROLE2_CREDS | cut -d' ' -f1)
+      export ROLE2_SECRET_KEY=$(echo $ROLE2_CREDS | cut -d' ' -f2)
+      export ROLE2_SESSION_TOKEN=$(echo $ROLE2_CREDS | cut -d' ' -f3)
+      
+      aws configure set aws_access_key_id $ROLE2_ACCESS_KEY --profile $STATE_PROFILE
+      aws configure set aws_secret_access_key $ROLE2_SECRET_KEY --profile $STATE_PROFILE
+      aws configure set aws_session_token $ROLE2_SESSION_TOKEN --profile $STATE_PROFILE
+      aws configure set region $AWS_DEFAULT_REGION --profile $STATE_PROFILE
+      
+      echo "Successfully configured $STATE_PROFILE profile"
+      aws sts get-caller-identity --profile $STATE_PROFILE
+
+.cleanup_credentials:
+  script:
+    - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE
+    - unset ROLE1_ACCESS_KEY ROLE1_SECRET_KEY ROLE1_SESSION_TOKEN
+    - unset ROLE2_ACCESS_KEY ROLE2_SECRET_KEY ROLE2_SESSION_TOKEN
+
+.terraform_apply_base:
+  extends: .terraform_base
+  stage: terraform-apply
+  script:
+    - cd ${TERRAFORM_DIR}
+    - |
+      echo "Setting state access credentials for terraform init..."
+      export AWS_ACCESS_KEY_ID=$ROLE2_ACCESS_KEY
+      export AWS_SECRET_ACCESS_KEY=$ROLE2_SECRET_KEY
+      export AWS_SESSION_TOKEN=$ROLE2_SESSION_TOKEN
+      unset AWS_PROFILE
+      
+      echo "Current identity for state access:"
+      aws sts get-caller-identity
+      
+      terraform init -reconfigure
+      
+      terraform plan -var-file="${TERRAFORM_TFVARS_FILE}" 
+      
+      terraform apply -var-file="${TERRAFORM_TFVARS_FILE}" -auto-approve
+
+.terraform_plan_base:
+  extends: .terraform_base
+  stage: terraform-plan
+  script:
+    - cd ${TERRAFORM_DIR}
+    - |
+      echo "Setting state access credentials for terraform init..."
+      export AWS_ACCESS_KEY_ID=$ROLE2_ACCESS_KEY
+      export AWS_SECRET_ACCESS_KEY=$ROLE2_SECRET_KEY
+      export AWS_SESSION_TOKEN=$ROLE2_SESSION_TOKEN
+      unset AWS_PROFILE
+      
+      echo "Current identity for state access:"
+      aws sts get-caller-identity
+      
+      terraform init -reconfigure
+      
+      terraform plan -var-file="${TERRAFORM_TFVARS_FILE}"
+
+.terraform_destroy_base:
+  extends: .terraform_base
+  stage: terraform-destroy
+  script:
+    - cd ${TERRAFORM_DIR}
+    - |
+      echo "Setting state access credentials for terraform init..."
+      export AWS_ACCESS_KEY_ID=$ROLE2_ACCESS_KEY
+      export AWS_SECRET_ACCESS_KEY=$ROLE2_SECRET_KEY
+      export AWS_SESSION_TOKEN=$ROLE2_SESSION_TOKEN
+      unset AWS_PROFILE
+      
+      echo "Current identity for state access:"
+      aws sts get-caller-identity
+      
+      terraform init -reconfigure
+      
+      terraform destroy -var-file="${TERRAFORM_TFVARS_FILE}" -auto-approve
+  when: manual

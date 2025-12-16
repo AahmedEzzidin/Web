@@ -1,0 +1,70 @@
+stages:
+  - build
+  - test
+  - deploy
+
+# These jobs run in parallel during the build stage
+build_frontend:
+  stage: build
+  script:
+    - echo "Building frontend application..."
+    - echo "Frontend build completed"
+
+build_backend:
+  stage: build
+  script:
+    - echo "Building backend service..."
+    - echo "Backend build completed"
+
+build_docs:
+  stage: build
+  script:
+    - echo "Building documentation..."
+    - echo "Documentation build completed"
+
+# These test jobs run in parallel during the test stage
+unit_tests:
+  stage: test
+  script:
+    - echo "Running unit tests..."
+    - echo "All unit tests passed"
+
+integration_tests:
+  stage: test
+  script:
+    - echo "Running integration tests..."
+    - echo "Integration tests completed"
+
+security_scan:
+  stage: test
+  script:
+    - echo "Running security scans..."
+    - echo "Security scan completed - no issues found"
+
+
+# Example 2: Matrix Strategy for Parallel Testing
+# Test across multiple environments/versions
+
+test_matrix:
+  stage: test
+  script:
+    - echo "Testing with Node $NODE_VERSION on $OS"
+    - echo "Environment:$NODE_VERSION-$OS"
+    - echo "Tests completed successfully"
+  parallel:
+    matrix:
+      - NODE_VERSION: ["14", "16", "18", "20"]
+        OS: ["ubuntu", "windows"]
+      - NODE_VERSION: ["18"]
+        OS: ["macos"]
+
+# Browser testing matrix
+browser_tests:
+  stage: test
+  script:
+    - echo "Running tests in $BROWSER browser"
+    - echo "Browser:$BROWSER"
+    - echo "$BROWSER tests completed"
+  parallel:
+    matrix:
+      - BROWSER: [chrome, firefox, edge, safari]

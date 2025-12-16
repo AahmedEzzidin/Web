@@ -1,0 +1,18 @@
+  stages:
+    - test
+
+  test_jobs:
+    stage: test
+    script:
+      - echo "Job $CI_NODE_INDEX of $CI_NODE_TOTAL running on $(hostname)"
+      - sleep 10
+      - echo "Job $CI_NODE_INDEX completed."
+    # parallel: 100
+
+  test_different_type:
+    stage: test
+    tags:
+      - t3large
+    script:
+      - echo "t3.large runner instance is running."
+    # parallel: 100

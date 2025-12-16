@@ -1,0 +1,31 @@
+{
+  "name": "cicd-security-demo",
+  "version": "1.0.0",
+  "description": "Demo project showcasing CI/CD pipeline security with secrets scanning and dependency audit",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "test": "echo \"Running tests...\" && exit 0",
+    "scan:secrets": "trufflehog filesystem . --json --only-verified",
+    "audit:dependencies": "npm audit --production",
+    "security:check": "npm run scan:secrets && npm run audit:dependencies"
+  },
+  "keywords": [
+    "security",
+    "cicd",
+    "secrets-scanning",
+    "dependency-audit",
+    "devsecops"
+  ],
+  "author": "Demo Author",
+  "license": "MIT",
+  "dependencies": {
+    "express": "4.17.1",
+    "dotenv": "10.0.0",
+    "axios": "0.21.1",
+    "lodash": "4.17.19"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}
