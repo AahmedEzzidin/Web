@@ -5,19 +5,14 @@
  * These patterns should NEVER be used in production code.
  */
 
-// ✅ GOOD PRACTICE: Use environment variables only (no hardcoded secrets)
+// ❌ BAD PRACTICE: Hardcoded secrets (removed)
+// The previous demo content intentionally included hardcoded secrets to
+// trigger CI/CD scanners. Those values have been removed to comply with
+// GitHub push protection and best practices.
+
 const config = {
   environment: process.env.NODE_ENV || 'development',
-  apiKey: process.env.API_KEY,
   apiUrl: process.env.API_URL || 'https://api.example.com',
-  database: {
-    url: process.env.DATABASE_URL
-  },
-  aws: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION
-  },
   features: {
     enableLogging: true,
     enableMetrics: false,
@@ -25,8 +20,19 @@ const config = {
   }
 };
 
-// Backwards-compatible alias for secure configuration
-const secureConfig = config;
+// ✅ GOOD PRACTICE: Use environment variables
+const secureConfig = {
+  environment: process.env.NODE_ENV || 'development',
+  apiKey: process.env.API_KEY,
+  database: {
+    url: process.env.DATABASE_URL
+  },
+  aws: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION
+  }
+};
 
-// Export secure configuration
+// Always export secure configuration patterns
 module.exports = secureConfig;
