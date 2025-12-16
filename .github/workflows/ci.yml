@@ -11,6 +11,8 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     
     steps:
       - name: Checkout code
@@ -23,7 +25,7 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       
       - name: Run linting
         run: echo "Linting passed (placeholder)"
@@ -45,18 +47,14 @@ jobs:
           path: coverage.txt
 
       - name: Notify Discord (build-and-test success)
-        if: success() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: success() && env.DISCORD_WEBHOOK_URL != ''
         run: |
           content="✅ CI: Build and Test succeeded on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`."
           json_payload=$(printf '{"content":"%s"}' "$content")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
       - name: Notify Discord (build-and-test failed)
-        if: failure() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: failure() && env.DISCORD_WEBHOOK_URL != ''
         run: |
           content="❌ CI: Build and Test failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`. Check Actions logs."
           json_payload=$(printf '{"content":"%s"}' "$content")
@@ -67,6 +65,8 @@ jobs:
     name: Security Checks
     runs-on: ubuntu-latest
     needs: [build-and-test]
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,9 +80,7 @@ jobs:
       - name: Run npm audit (high severity)
         run: npm audit --audit-level=high || true
       - name: Notify Discord (security checks complete)
-        if: ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: env.DISCORD_WEBHOOK_URL != ''
         run: |
           content="🔒 Security checks completed for commit \`${{ github.sha }}\`. Review audit results in logs."
           json_payload=$(printf '{"content":"%s"}' "$content")
@@ -94,6 +92,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-test, security-checks]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     
     steps:
       - name: Checkout code
@@ -106,18 +106,14 @@ jobs:
           echo "🔗 App URL: https://your-app.example.com"
 
       - name: Notify Discord (deploy success)
-        if: success() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: success() && env.DISCORD_WEBHOOK_URL != ''
         run: |
           content="🚀 Deployment succeeded on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. App URL: https://your-app.example.com"
           json_payload=$(printf '{"content":"%s"}' "$content")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
       - name: Notify Discord (deploy failed)
-        if: failure() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: failure() && env.DISCORD_WEBHOOK_URL != ''
         run: |
           content="⚠️ Deployment failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. Check Actions logs."
           json_payload=$(printf '{"content":"%s"}' "$content")
