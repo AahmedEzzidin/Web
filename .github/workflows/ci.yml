@@ -74,15 +74,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          # No caching since no lockfile is present
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       - name: Run npm audit (high severity)
         run: npm audit --audit-level=high || true
-      - name: Notify Discord (security checks complete)
-        if: env.DISCORD_WEBHOOK_URL != ''
+      - name: Notify Discord (security-checks status)
+        if: always() && env.DISCORD_WEBHOOK_URL != ''
         run: |
-          content="🔒 Security checks completed for commit \`${{ github.sha }}\`. Review audit results in logs."
+          status="${{ job.status }}"
+          content="🔒 Security checks ${status} on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`."
           json_payload=$(printf '{"content":"%s"}' "$content")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
