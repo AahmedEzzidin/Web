@@ -45,20 +45,22 @@ jobs:
           path: coverage.txt
 
       - name: Notify Discord (build-and-test success)
-        if: success()
+        if: success() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          payload=$(jq -n --arg content "✅ CI: Build and Test succeeded on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`." '{"content": $content}')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL"
+          content="✅ CI: Build and Test succeeded on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`."
+          json_payload=$(printf '{"content":"%s"}' "$content")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
       - name: Notify Discord (build-and-test failed)
-        if: failure()
+        if: failure() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          payload=$(jq -n --arg content "❌ CI: Build and Test failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`. Check Actions logs." '{"content": $content}')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL"
+          content="❌ CI: Build and Test failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`. Check Actions logs."
+          json_payload=$(printf '{"content":"%s"}' "$content")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
   # Call security workflow
   security-checks:
@@ -78,11 +80,13 @@ jobs:
       - name: Run npm audit (high severity)
         run: npm audit --audit-level=high || true
       - name: Notify Discord (security checks complete)
+        if: ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          payload=$(jq -n --arg content "🔒 Security checks completed for commit \`${{ github.sha }}\`. Review audit results in logs." '{"content": $content}')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL"
+          content="🔒 Security checks completed for commit \`${{ github.sha }}\`. Review audit results in logs."
+          json_payload=$(printf '{"content":"%s"}' "$content")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
   # Deploy job (only runs if security passes)
   deploy:
@@ -102,17 +106,19 @@ jobs:
           echo "🔗 App URL: https://your-app.example.com"
 
       - name: Notify Discord (deploy success)
-        if: success()
+        if: success() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          payload=$(jq -n --arg content "🚀 Deployment succeeded on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. App URL: https://your-app.example.com" '{"content": $content}')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL"
+          content="🚀 Deployment succeeded on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. App URL: https://your-app.example.com"
+          json_payload=$(printf '{"content":"%s"}' "$content")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
       - name: Notify Discord (deploy failed)
-        if: failure()
+        if: failure() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          payload=$(jq -n --arg content "⚠️ Deployment failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. Check Actions logs." '{"content": $content}')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL"
+          content="⚠️ Deployment failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. Check Actions logs."
+          json_payload=$(printf '{"content":"%s"}' "$content")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
