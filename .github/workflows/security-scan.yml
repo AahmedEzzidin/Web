@@ -12,6 +12,8 @@ jobs:
   secrets-scan:
     name: Scan for Secrets
     runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     
     steps:
       - name: Checkout code
@@ -32,9 +34,7 @@ jobs:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
       - name: Notify Discord (secrets-scan status)
-        if: always() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: always() && env.DISCORD_WEBHOOK_URL != ''
         run: |
           status="${{ job.status }}"
           content="🔎 Secrets scan ${status} for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`."
@@ -55,6 +55,8 @@ jobs:
   dependency-audit:
     name: Audit Dependencies
     runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     
     steps:
       - name: Checkout code
@@ -115,9 +117,7 @@ jobs:
           fi
 
       - name: Notify Discord (dependency-audit status)
-        if: always() && ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: always() && env.DISCORD_WEBHOOK_URL != ''
         run: |
           status="${{ job.status }}"
           content="📦 Dependency audit ${status} for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`."
