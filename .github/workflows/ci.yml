@@ -46,6 +46,11 @@ jobs:
           name: coverage-report
           path: coverage.txt
 
+      - name: Intentional Failure Test (build-and-test)
+        run: |
+          echo "🔴 Intentionally failing Build and Test job to exercise Discord notifications."
+          exit 1
+
       - name: Notify Discord (build-and-test success)
         if: success() && env.DISCORD_WEBHOOK_URL != ''
         run: |
@@ -109,6 +114,11 @@ jobs:
           echo "🚀 Deploying to production..."
           echo "✅ Deployment successful!"
           echo "🔗 App URL: https://your-app.example.com"
+
+      - name: Intentional Failure Test (deploy)
+        run: |
+          echo "🔴 Intentionally failing Deploy job to exercise Discord notifications."
+          exit 1
 
       - name: Notify Discord (deploy success)
         if: success() && env.DISCORD_WEBHOOK_URL != ''

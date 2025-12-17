@@ -33,6 +33,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
+      - name: Intentional Failure Test (secrets-scan)
+        run: |
+          echo "🔴 Intentionally failing Secrets Scan job to exercise Discord notifications."
+          exit 1
+
       - name: Notify Discord (secrets-scan status)
         if: always() && env.DISCORD_WEBHOOK_URL != ''
         run: |
@@ -119,6 +124,11 @@ jobs:
           content="📦 Dependency audit ${status} for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`."
           json_payload=$(printf '{"content":"%s"}' "$content")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
+
+      - name: Intentional Failure Test (dependency-audit)
+        run: |
+          echo "🔴 Intentionally failing Dependency Audit job to exercise Discord notifications."
+          exit 1
 
   # Job 3: Security Summary
   security-summary:
