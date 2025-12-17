@@ -2,7 +2,7 @@
  * Utility Functions
  */
 
-const axios = require('axios');
+// Use native fetch (Node.js >=18) to avoid axios CVEs
 const config = require('./config');
 
 /**
@@ -12,15 +12,22 @@ const config = require('./config');
  */
 async function fetchUserData(userId) {
   try {
-    // Simulate API call
-    const response = await axios.get(`${config.apiUrl}/users/${userId}`, {
+    const url = `${config.apiUrl}/users/${userId}`;
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json'
       }
     });
-    
-    return response.data;
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`HTTP ${response.status}: ${body}`);
+    }
+
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error fetching user data:', error.message);
     throw error;
