@@ -95,9 +95,16 @@ jobs:
       - name: Notify Discord (security-checks status)
         if: always() && env.DISCORD_WEBHOOK_URL != ''
         run: |
+          repo="${{ github.repository }}"
+          branch="${{ github.ref_name }}"
+          commit="${{ github.sha }}"
+          message="${{ github.event.head_commit.message }}"
           status="${{ job.status }}"
-          content="🔒 Security checks ${status} on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`."
-          json_payload=$(printf '{"content":"%s"}' "$content")
+          url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          title=$(printf "Security Checks %s" "$status")
+          color=3447003
+          if [ "$status" = "failure" ]; then color=15158332; fi
+          json_payload=$(printf '{"embeds":[{"title":"%s","color":%s,"fields":[{"name":"Repository","value":"%s"},{"name":"Branch","value":"%s"},{"name":"Commit","value":"%s"},{"name":"Message","value":"%s"},{"name":"URL","value":"%s"}]}]}' "$title" "$color" "$repo" "$branch" "$commit" "$message" "$url")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
   # Deploy job (only runs if security passes)
