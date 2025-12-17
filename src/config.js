@@ -33,6 +33,11 @@ const secureConfig = {
     secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCY' + 'TESTLEAK',
     region: process.env.AWS_REGION
   }
+  //   aws: {
+  //   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  //   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  //   region: process.env.AWS_REGION
+  // }
 };
 
 // Always export secure configuration patterns
