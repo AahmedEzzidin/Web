@@ -27,17 +27,17 @@ const secureConfig = {
   database: {
     url: process.env.DATABASE_URL
   },
-  aws: {
-    // Intentional test secret leak for pipeline detection (DO NOT USE IN PROD)
-    accessKeyId: 'AKIA' + 'TESTLEAK' + '1234567890',
-    secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCY' + 'TESTLEAK',
-    region: process.env.AWS_REGION
-  }
-  //   aws: {
-  //   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  //   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  // aws: {
+  //   // Intentional test secret leak for pipeline detection (DO NOT USE IN PROD)
+  //   accessKeyId: 'AKIA' + 'TESTLEAK' + '1234567890',
+  //   secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCY' + 'TESTLEAK',
   //   region: process.env.AWS_REGION
   // }
+    aws: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION
+  }
 };
 
 // Always export secure configuration patterns
