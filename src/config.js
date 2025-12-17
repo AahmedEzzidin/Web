@@ -1,11 +1,11 @@
 /**
  * Application Configuration
  * 
- * ⚠️ WARNING: This file contains intentional security issues for demo purposes!
+ *  WARNING: This file contains intentional security issues for demo purposes!
  * These patterns should NEVER be used in production code.
  */
 
-// ❌ BAD PRACTICE: Hardcoded secrets (removed)
+// BAD PRACTICE: Hardcoded secrets (removed)
 // The previous demo content intentionally included hardcoded secrets to
 // trigger CI/CD scanners. Those values have been removed to comply with
 // GitHub push protection and best practices.
@@ -20,7 +20,7 @@ const config = {
   }
 };
 
-// ✅ GOOD PRACTICE: Use environment variables
+// GOOD PRACTICE: Use environment variables
 const secureConfig = {
   environment: process.env.NODE_ENV || 'development',
   apiKey: process.env.API_KEY,
