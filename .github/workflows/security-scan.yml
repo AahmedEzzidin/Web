@@ -33,10 +33,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
-      - name: Intentional Failure Test (secrets-scan)
+      - name: Notify Discord (secrets leakage detected)
+        if: failure() && env.DISCORD_WEBHOOK_URL != ''
         run: |
-          echo "🔴 Intentionally failing Secrets Scan job to exercise Discord notifications."
-          exit 1
+          repo="${{ github.repository }}"
+          branch="${{ github.ref_name }}"
+          commit="${{ github.sha }}"
+          message="${{ github.event.head_commit.message }}"
+          url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json_payload=$(printf '{"embeds":[{"title":"Security Checks Failed","color":15158332,"fields":[{"name":"Repository","value":"%s"},{"name":"Branch","value":"%s"},{"name":"Commit","value":"%s"},{"name":"Cause","value":"Secrets leakage detected (e.g., hardcoded accessKeyId)"},{"name":"URL","value":"%s"}]}]}' "$repo" "$branch" "$commit" "$url")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
       - name: Notify Discord (secrets-scan status)
         if: always() && env.DISCORD_WEBHOOK_URL != ''
@@ -139,10 +145,7 @@ jobs:
           json_payload=$(printf '{"embeds":[{"title":"%s","color":%s,"fields":[{"name":"Repository","value":"%s"},{"name":"Branch","value":"%s"},{"name":"Commit","value":"%s"},{"name":"Message","value":"%s"},{"name":"URL","value":"%s"}]}]}' "$title" "$color" "$repo" "$branch" "$commit" "$message" "$url")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
-      - name: Intentional Failure Test (dependency-audit)
-        run: |
-          echo "🔴 Intentionally failing Dependency Audit job to exercise Discord notifications."
-          exit 1
+      # No intentional failure; dependency audit is non-blocking per current policy
 
   # Job 3: Security Summary
   security-summary:
@@ -220,7 +223,22 @@ jobs:
     needs: [secrets-scan, dependency-audit]
     
     steps:
-      - name: Check Security Results
+      - name: Notify Discord (pipeline blocked due to secrets leakage)
+        if: ${{ needs.secrets-scan.result != 'success' }} && env.DISCORD_WEBHOOK_URL != ''
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          echo "⚠️ Security checks may have findings, but pipeline will proceed."
-          echo "✅ Deployment can proceed."
+          repo="${{ github.repository }}"
+          branch="${{ github.ref_name }}"
+          commit="${{ github.sha }}"
+          url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json_payload=$(printf '{"embeds":[{"title":"Pipeline Blocked","color":15158332,"fields":[{"name":"Repository","value":"%s"},{"name":"Branch","value":"%s"},{"name":"Commit","value":"%s"},{"name":"Cause","value":"Secrets leakage detected"},{"name":"URL","value":"%s"}]}]}' "$repo" "$branch" "$commit" "$url")
+          curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
+
+      - name: Fail pipeline if secrets leakage detected
+        run: |
+          if [ "${{ needs.secrets-scan.result }}" != "success" ]; then
+            echo "❌ Secrets leakage detected. Failing pipeline."
+            exit 1
+          fi
+          echo "✅ No secrets leakage; proceeding."
