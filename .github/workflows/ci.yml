@@ -65,8 +65,12 @@ jobs:
       - name: Notify Discord (build-and-test failed)
         if: failure() && env.DISCORD_WEBHOOK_URL != ''
         run: |
-          content="❌ CI: Build and Test failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\` in repo \`${{ github.repository }}\`. Check Actions logs."
-          json_payload=$(printf '{"content":"%s"}' "$content")
+          repo="${{ github.repository }}"
+          branch="${{ github.ref_name }}"
+          commit="${{ github.sha }}"
+          message="${{ github.event.head_commit.message }}"
+          url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json_payload=$(printf '{"embeds":[{"title":"CI Pipeline Failed","color":15158332,"fields":[{"name":"Repository","value":"%s"},{"name":"Branch","value":"%s"},{"name":"Commit","value":"%s"},{"name":"Message","value":"%s"},{"name":"URL","value":"%s"}]}]}' "$repo" "$branch" "$commit" "$message" "$url")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
 
   # Call security workflow
@@ -134,6 +138,10 @@ jobs:
       - name: Notify Discord (deploy failed)
         if: failure() && env.DISCORD_WEBHOOK_URL != ''
         run: |
-          content="⚠️ Deployment failed on \`${{ github.ref }}\` for commit \`${{ github.sha }}\`. Check Actions logs."
-          json_payload=$(printf '{"content":"%s"}' "$content")
+          repo="${{ github.repository }}"
+          branch="${{ github.ref_name }}"
+          commit="${{ github.sha }}"
+          message="${{ github.event.head_commit.message }}"
+          url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json_payload=$(printf '{"embeds":[{"title":"Deployment Failed","color":15158332,"fields":[{"name":"Repository","value":"%s"},{"name":"Environment","value":"production"},{"name":"Branch","value":"%s"},{"name":"Commit","value":"%s"},{"name":"Message","value":"%s"},{"name":"URL","value":"%s"}]}]}' "$repo" "$branch" "$commit" "$message" "$url")
           curl -fsSL -H "Content-Type: application/json" -X POST --data-raw "$json_payload" "$DISCORD_WEBHOOK_URL"
