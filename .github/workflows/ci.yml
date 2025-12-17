@@ -126,10 +126,10 @@ jobs:
           echo "✅ Deployment successful!"
           echo "🔗 App URL: https://your-app.example.com"
 
-      - name: Intentional Failure Test (deploy)
-        run: |
-          echo "🔴 Intentionally failing Deploy job to exercise Discord notifications."
-          exit 1
+      # - name: Intentional Failure Test (deploy)
+      #   run: |
+      #     echo "🔴 Intentionally failing Deploy job to exercise Discord notifications."
+      #     exit 1
 
       - name: Notify Discord (deploy success)
         if: success() && env.DISCORD_WEBHOOK_URL != ''
